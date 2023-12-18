@@ -1,25 +1,66 @@
-import logo from './logo.svg';
-import './App.css';
+import {
+  RouterProvider,
+  createBrowserRouter,
+  useNavigate,
+} from "react-router-dom";
+import "./App.css";
+import Body from "./components/Body";
+import About from "./components/About";
+import Error from "./components/Error";
+import Login from "./components/Login";
+import ResMenu from "./components/ResMenu";
 
-function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
-}
+import { Suspense, lazy, useEffect } from "react";
+import { useDispatch } from "react-redux";
+
+import Cart from "./components/Cart";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "./utils/firebase";
+import { addUser, removeUser } from "./utils/userSlice";
+
+const Grocery = lazy(() => import("./components/Grocery"));
+
+const App = () => {
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        const { uid, email, displayName, photoURL } = user;
+        dispatch(
+          addUser({
+            uid: uid,
+            email: email,
+            displayName: displayName,
+            photoURL: photoURL,
+          })
+        );
+      } else {
+        dispatch(removeUser());
+      }
+    });
+  }, []);
+  const appRouter = createBrowserRouter([
+    { path: "/", element: <Login />, errorElement: <Error /> },
+    { path: "/body", element: <Body /> },
+    { path: "/about", element: <About /> },
+    {
+      path: "/restaurants/:resId",
+      element: <ResMenu />,
+    },
+
+    {
+      path: "/grocery",
+      element: (
+        <Suspense fallback={<h1>...loading</h1>}>
+          <Grocery />
+        </Suspense>
+      ),
+    },
+    { path: "/cart", element: <Cart /> },
+  ]);
+
+  return <RouterProvider router={appRouter} />;
+};
 
 export default App;
